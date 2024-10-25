@@ -49,7 +49,7 @@ class LipDataset(Dataset):
             # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             
             frame = frame[
-                190:236, 80:220
+                190:236, 80:220, :
             ]  # TODO: Make it dynamic using dlib  # Take only the lip part of the frame
             
             if self.transform:
@@ -84,3 +84,18 @@ class LipDataset(Dataset):
 
         
         return torch.tensor(token_nums[1:], dtype=torch.long)
+    
+    
+    
+def collate_fn(batch, pad_value=0):
+    frames, labels = zip(*batch)
+
+    # Pad the frames to the same length
+    max_len = max([f.shape[0] for f in frames])
+    frames = [torch.nn.functional.pad(input=f, pad=(0, 0, 0, 0, 0, 0, 0, max_len - f.shape[0]), mode='constant', value=0) for f in frames] 
+    
+    # Pad the labels to the same length
+    max_len = max([l.shape[0] for l in labels])  # noqa: E741
+    labels = [torch.nn.functional.pad(input=l, pad=(0, max_len - l.shape[0]), mode='constant', value=pad_value) for l in labels]  # noqa: E741
+    
+    return torch.stack(frames), torch.stack(labels)

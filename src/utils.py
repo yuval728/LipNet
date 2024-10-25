@@ -6,7 +6,7 @@ import torch
 
 def get_word2idx_idx2word(vocab):
     word2idx = {word: idx for idx, word in enumerate(vocab)}
-    # word2idx['<PAD>'] = len(word2idx)
+    word2idx['<PAD>'] = len(word2idx)
     # word2idx['<START>'] = len(word2idx)
     # word2idx['<END>'] = len(word2idx)
     # word2idx['<UNK>'] = len(word2idx)
