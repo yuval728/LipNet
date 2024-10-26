@@ -1,13 +1,14 @@
 import torch
+from torchvision import transforms
 import cv2
 import os
 from torch.utils.data import Dataset
-from src.utils import char_to_num, num_to_char
+from src.utils import  get_word2idx_idx2word, char_to_num, num_to_char
 
 
 
 class LipDataset(Dataset):
-    def __init__(self, data_dir: str, label_dir: str, vocab: list, word2idx: dict, idx2word: dict, transform=None):
+    def __init__(self, data_dir: str, label_dir: str, vocab: list, word2idx: dict, idx2word: dict, transform=transforms.ToTensor()) -> None:
         self.data_dir = data_dir
         self.label_dir = label_dir
         self.transform = transform
@@ -61,10 +62,10 @@ class LipDataset(Dataset):
         
         frames = torch.stack(frames)
         
-        std = torch.std(frames)
-        mean = torch.mean(frames)
-        
-        frames = (frames - mean) / std # Normalize the frames (z-score normalization
+        # std = torch.std(frames)
+        # mean = torch.mean(frames)
+        # print(std, mean)
+        # frames = (frames - mean) / std # Normalize the frames (z-score normalization
 
         return frames # (T, H, W, C)
     
@@ -99,3 +100,31 @@ def collate_fn(batch, pad_value=0):
     labels = [torch.nn.functional.pad(input=l, pad=(0, max_len - l.shape[0]), mode='constant', value=pad_value) for l in labels]  # noqa: E741
     
     return torch.stack(frames), torch.stack(labels)
+
+
+
+if __name__ == '__main__':
+    import constants
+    
+    vocab = constants.vocab
+    word2idx, idx2word = get_word2idx_idx2word(vocab)
+    
+    data_dir = "data/s1"
+    label_dir = "data/alignments/s1"
+    
+    
+    data_transform = transforms.Compose(
+        [
+            transforms.ToPILImage(),                      # Convert the OpenCV image (NumPy array) to a PIL image
+            transforms.Grayscale(num_output_channels=3),  # Convert to grayscale
+            # transforms.ToTensor(),                        # Convert the PIL image to a PyTorch tensor (values between 0 and 1)
+            # transforms.Normalize(mean=[0.5], std=[0.5])
+            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ]
+    )
+
+    dataset = LipDataset(data_dir=data_dir, label_dir=label_dir, vocab=vocab, word2idx=word2idx, idx2word=idx2word, transform=data_transform)
+    
+    print(len(dataset))
+    frames, label = dataset[50]
+    print(frames.shape, label.shape)
