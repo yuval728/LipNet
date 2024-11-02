@@ -3,7 +3,7 @@ from torchvision import transforms
 import cv2
 import os
 from torch.utils.data import Dataset
-from src.utils import  get_word2idx_idx2word, char_to_num, num_to_char
+from utils import  get_word2idx_idx2word, char_to_num, num_to_char
 
 
 
@@ -13,6 +13,7 @@ class LipDataset(Dataset):
         self.label_dir = label_dir
         self.transform = transform
         self.data = os.listdir(data_dir)
+        self.data.remove('sgib8n.mpg')
         self.label = os.listdir(label_dir)
         self.vocab = vocab
         self.word2idx = word2idx
@@ -22,22 +23,30 @@ class LipDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        data_path = os.path.join(self.data_dir, self.data[idx])
-        label_path = os.path.join(self.label_dir, self.label[idx])
+        try:
+            data_path = os.path.join(self.data_dir, self.data[idx])
+            label_file = self.data[idx].split(".")[0] + ".align"
+            label_path = os.path.join(self.label_dir, label_file)
 
-        assert os.path.exists(data_path), f"Data path {data_path} does not exist"
-        assert os.path.exists(label_path), f"Label path {label_path} does not exist"
+            assert os.path.exists(data_path), f"Data path {data_path} does not exist"
+            assert os.path.exists(label_path), f"Label path {label_path} does not exist"
 
-        assert (
-            data_path.split("/")[-1].split(".")[0]
-            == label_path.split("/")[-1].split(".")[0]
-        ), "Data and label file names do not match"
+            assert (
+                data_path.split("/")[-1].split(".")[0]
+                == label_path.split("/")[-1].split(".")[0]
+            ), "Data and label file names do not match"
 
-        frames = self.load_video(data_path)
+            frames = self.load_video(data_path)
+            if frames is None:
+                print(idx)
 
-        label = self.load_alignment(label_path)
+            label = self.load_alignment(label_path)
+            
+#             print(idx, label_file)
 
-        return frames, label
+            return frames, label
+        except Exception as e:
+            print(idx, e)
 
     def load_video(self, path: str) -> torch.Tensor:
         cap = cv2.VideoCapture(path)
@@ -62,10 +71,10 @@ class LipDataset(Dataset):
         
         frames = torch.stack(frames)
         
-        # std = torch.std(frames)
-        # mean = torch.mean(frames)
-        # print(std, mean)
-        # frames = (frames - mean) / std # Normalize the frames (z-score normalization
+        std = torch.std(frames)
+        mean = torch.mean(frames)
+#         print(std, mean)
+        frames = (frames - mean) / std # Normalize the frames (z-score normalization
 
         return frames # (T, H, W, C)
     
@@ -84,9 +93,7 @@ class LipDataset(Dataset):
         token_nums = char_to_num(tokens, self.word2idx)
 
         
-        return torch.tensor(token_nums[1:], dtype=torch.long)
-    
-    
+        return torch.tensor(token_nums[1:], dtype=torch.long)   
     
 def collate_fn(batch, pad_value=0):
     frames, labels = zip(*batch)

@@ -27,48 +27,49 @@ class TimeDistributed(nn.Module):
         
         
 class LipNet(nn.Module):
-    def __init__(self, vocab_size, input_size, hidden_size=128, num_layers=2, dropout=0.5, input_channels=1):
+    def __init__(self, vocab_size, input_size, hidden_size=128, dropout=0.5, input_channels=1):
         super().__init__()
-        
-        self.vocab_size = vocab_size
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.dropout = dropout
-        
+                
         self.conv = nn.Sequential(
-            nn.Conv3d(in_channels=input_channels, out_channels=128, kernel_size=3, padding='same'),
+            nn.Conv3d(in_channels=input_channels, out_channels=128, kernel_size=(3,3,3), stride=(1, 1, 1), padding=(1, 1, 1)),
             nn.BatchNorm3d(128),
-            nn.ReLU(),
+            nn.ReLU(True),
             nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2)),
+            # nn.Dropout3d(dropout),
             
-            nn.Conv3d(in_channels=128, out_channels=256, kernel_size=3, padding='same'),
+            nn.Conv3d(in_channels=128, out_channels=256, kernel_size=(3,3,3), stride=(1, 1, 1), padding=(1, 1, 1)),
             nn.BatchNorm3d(256),
-            nn.ReLU(),
+            nn.ReLU(True),
             nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2)),
+            # nn.Dropout3d(dropout),
             
-            nn.Conv3d(in_channels=256, out_channels=75, kernel_size=3, padding='same'),
-            # nn.BatchNorm3d(64),
-            nn.ReLU(),
-            nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+            nn.Conv3d(in_channels=256, out_channels=75, kernel_size=(3,3,3), stride=(1, 1, 1), padding=(1, 1, 1)),
+            nn.BatchNorm3d(75),
+            nn.ReLU(True),
+            nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2)),
+            # nn.Dropout3d(dropout)
         )
         
-        self.flatten = TimeDistributed(nn.Flatten())
         
         self.lstm1 = nn.LSTM(input_size=75 * (46 // 8) * (140 // 8), hidden_size=hidden_size,
                              num_layers=1, batch_first=True, bidirectional=True)
-        self.dropout1 = nn.Dropout(self.dropout)
+        self.dropout1 = nn.Dropout(dropout)
         
         self.lstm2 = nn.LSTM(input_size=256, hidden_size=hidden_size,
                              num_layers=1, batch_first=True, bidirectional=True)
-        self.dropout2 = nn.Dropout(self.dropout)
+        self.dropout2 = nn.Dropout(dropout)
         self.fc = nn.Linear(hidden_size * 2, vocab_size+1)
         
         self.initialize_weights()
         
     def forward(self, x):
         x = self.conv(x)
-        x = self.flatten(x)
+        x = x.permute(2, 0, 1, 3, 4).contiguous()
+        # (B, C, T, H, W)->(T, B, C*H*W)
+        x = x.view(x.size(0), x.size(1), -1)
+        
+        self.lstm1.flatten_parameters()
+        self.lstm2.flatten_parameters()
         
         x, _ = self.lstm1(x)
         x = self.dropout1(x)
@@ -77,7 +78,7 @@ class LipNet(nn.Module):
         x = self.dropout2(x)
         
         x = self.fc(x)
-        
+        x = x.permute(1, 0, 2).contiguous()
         return x
     
     def initialize_weights(self):
