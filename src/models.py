@@ -27,7 +27,7 @@ class TimeDistributed(nn.Module):
         
         
 class LipNet(nn.Module):
-    def __init__(self, vocab_size, input_size, hidden_size=128, dropout=0.5, input_channels=1):
+    def __init__(self, vocab_size, hidden_size=128, dropout=0.4, input_channels=1):
         super().__init__()
                 
         self.conv = nn.Sequential(
@@ -52,11 +52,11 @@ class LipNet(nn.Module):
         
         
         self.lstm1 = nn.LSTM(input_size=75 * (46 // 8) * (140 // 8), hidden_size=hidden_size,
-                             num_layers=1, batch_first=True, bidirectional=True)
+                             num_layers=1, batch_first=False, bidirectional=True)
         self.dropout1 = nn.Dropout(dropout)
         
-        self.lstm2 = nn.LSTM(input_size=256, hidden_size=hidden_size,
-                             num_layers=1, batch_first=True, bidirectional=True)
+        self.lstm2 = nn.LSTM(input_size=hidden_size*2, hidden_size=hidden_size,
+                             num_layers=1, batch_first=False, bidirectional=True)
         self.dropout2 = nn.Dropout(dropout)
         self.fc = nn.Linear(hidden_size * 2, vocab_size+1)
         

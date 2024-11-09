@@ -2,7 +2,7 @@ import torch
 from torchvision import transforms
 import cv2
 import os
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from utils import  get_word2idx_idx2word, char_to_num, num_to_char
 
 
@@ -13,7 +13,7 @@ class LipDataset(Dataset):
         self.label_dir = label_dir
         self.transform = transform
         self.data = os.listdir(data_dir)
-        self.data.remove('sgib8n.mpg')
+        # self.data.remove('sgib8n.mpg') # Remove this file as it is corrupted
         self.label = os.listdir(label_dir)
         self.vocab = vocab
         self.word2idx = word2idx
@@ -47,6 +47,12 @@ class LipDataset(Dataset):
             return frames, label
         except Exception as e:
             print(idx, e)
+            
+    def get_data_name(self, idx):
+        return self.data[idx].split(".")[0]
+    def get_data_idx(self, name):
+        return self.data.index(name + ".mpg")
+    
 
     def load_video(self, path: str) -> torch.Tensor:
         cap = cv2.VideoCapture(path)
@@ -57,10 +63,10 @@ class LipDataset(Dataset):
             ret, frame = cap.read()
             
             # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            
+            # Take only the lip part of the frame
             frame = frame[
                 190:236, 80:220, :
-            ]  # TODO: Make it dynamic using dlib  # Take only the lip part of the frame
+            ]  # TODO: Make it dynamic using dlib  
             
             if self.transform:
                 frame = self.transform(frame)
@@ -91,10 +97,9 @@ class LipDataset(Dataset):
                 tokens.extend(list(line[2]))  
 
         token_nums = char_to_num(tokens, self.word2idx)
-
-        
-        return torch.tensor(token_nums[1:], dtype=torch.long)   
+        return torch.tensor(token_nums[1:], dtype=torch.long)
     
+      
 def collate_fn(batch, pad_value=0):
     frames, labels = zip(*batch)
 
@@ -102,11 +107,10 @@ def collate_fn(batch, pad_value=0):
     max_len = max([f.shape[0] for f in frames])
     frames = [torch.nn.functional.pad(input=f, pad=(0, 0, 0, 0, 0, 0, 0, max_len - f.shape[0]), mode='constant', value=0) for f in frames] 
     
-    # Pad the labels to the same length
-    max_len = max([l.shape[0] for l in labels])  # noqa: E741
-    labels = [torch.nn.functional.pad(input=l, pad=(0, max_len - l.shape[0]), mode='constant', value=pad_value) for l in labels]  # noqa: E741
+
+    labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True)
     
-    return torch.stack(frames), torch.stack(labels)
+    return torch.stack(frames), labels
 
 
 
@@ -122,11 +126,9 @@ if __name__ == '__main__':
     
     data_transform = transforms.Compose(
         [
-            transforms.ToPILImage(),                      # Convert the OpenCV image (NumPy array) to a PIL image
-            transforms.Grayscale(num_output_channels=3),  # Convert to grayscale
-            # transforms.ToTensor(),                        # Convert the PIL image to a PyTorch tensor (values between 0 and 1)
-            # transforms.Normalize(mean=[0.5], std=[0.5])
-            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            # transforms.ToPILImage(),                      
+            # transforms.Grayscale(num_output_channels=3),  
+            transforms.ToTensor(),
         ]
     )
 
@@ -135,3 +137,7 @@ if __name__ == '__main__':
     print(len(dataset))
     frames, label = dataset[50]
     print(frames.shape, label.shape)
+    
+    loader = DataLoader(dataset, batch_size=2, shuffle=True, collate_fn=collate_fn, pin_memory=True, num_workers=4)
+    frames, labels = next(iter(loader))
+    print(frames.shape, labels.shape)
