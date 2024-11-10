@@ -2,6 +2,7 @@ import os
 import numpy as np
 import torch
 import torch.nn.functional as F
+import editdistance
 
 
 def get_word2idx_idx2word(vocab):
@@ -64,7 +65,7 @@ def save_checkpoint(model, optimizer, epoch, loss, checkpoint_path, min_loss, is
         print(f'Best model saved at {best_path}')
     
     
-def ctc_greedy_decode(y_pred, idx2word, blank_index=0):
+def ctc_greedy_decode(y_pred, idx2word, blank_index=0, print_output=True):
     # Apply softmax to the model outputs to get probabilities
     probs = F.softmax(y_pred, dim=-1)
     
@@ -84,5 +85,39 @@ def ctc_greedy_decode(y_pred, idx2word, blank_index=0):
             previous_index = index
         
         decoded_outputs.append(current_output)  # Store decoded output for each batch
-    print(decoded_outputs)
+    if print_output:
+        print(decoded_outputs)
+
     return decoded_outputs
+
+
+def word_error_rate(actual, prediction):
+    
+    word_pairs = []
+    for act, pred in zip(actual, prediction):
+        act = ''.join(act).split(" ")
+        pred = ''.join(pred).split(" ")
+        word_pairs.append((act, pred))
+    wer = [editdistance.eval(act, pred)/len(act) for act, pred in word_pairs]
+    return np.mean(wer)
+    # error_count = 0
+    # total_count = 0
+    # for act, pred in word_pairs:
+    #     total_count += len(act)
+    #     error_count += sum([1 for a, b in zip(act, pred) if a != b])
+
+def character_error_rate(actual, prediction):
+    char_pairs = [(list(act), list(pred)) for act, pred in zip(actual, prediction)]
+    error_count = 0
+    total_count = 0
+    
+    cer = [editdistance.eval(act, pred)/len(act) for act, pred in char_pairs]
+    return np.mean(cer)
+    
+    
+    # for act, pred in char_pairs:
+    #     total_count += len(act)
+    #     error_count += sum([1 for a, b in zip(act, pred) if a != b])
+    # return error_count / total_count
+
+    
