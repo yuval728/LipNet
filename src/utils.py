@@ -100,21 +100,21 @@ def word_error_rate(actual, prediction):
         word_pairs.append((act, pred))
     wer = [editdistance.eval(act, pred)/len(act) for act, pred in word_pairs]
     return np.mean(wer)
-    # error_count = 0
-    # total_count = 0
-    # for act, pred in word_pairs:
-    #     total_count += len(act)
-    #     error_count += sum([1 for a, b in zip(act, pred) if a != b])
 
 def character_error_rate(actual, prediction):
     char_pairs = [(list(act), list(pred)) for act, pred in zip(actual, prediction)]
-    error_count = 0
-    total_count = 0
     
     cer = [editdistance.eval(act, pred)/len(act) for act, pred in char_pairs]
     return np.mean(cer)
     
     
+    # error_count = 0
+    # total_count = 0
+    # for act, pred in word_pairs:
+    #     total_count += len(act)
+    #     error_count += sum([1 for a, b in zip(act, pred) if a != b])
+    # error_count = 0
+    # total_count = 0
     # for act, pred in char_pairs:
     #     total_count += len(act)
     #     error_count += sum([1 for a, b in zip(act, pred) if a != b])

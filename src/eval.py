@@ -30,7 +30,7 @@ def test(model, test_loader, device, criterion):
             char_error_rate = utils.character_error_rate(truth, decoded_preds)
             total_wer += word_error_rate
             total_cer += char_error_rate
-            print(f'Word Error Rate: {word_error_rate} | Character Error Rate: {char_error_rate}')
+            # print(f'Word Error Rate: {word_error_rate} | Character Error Rate: {char_error_rate}')
             
     test_loss /= len(test_loader)
     total_wer /= len(test_loader)
