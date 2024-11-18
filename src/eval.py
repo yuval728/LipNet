@@ -16,6 +16,8 @@ def test(model, test_loader, device, criterion):
     test_loss = 0
     total_wer = 0
     total_cer = 0
+    
+    count = 0
     with torch.inference_mode():
         for frames, labels in tqdm(test_loader):
             frames, labels = frames.to(device), labels.to(device)
@@ -30,6 +32,10 @@ def test(model, test_loader, device, criterion):
             char_error_rate = utils.character_error_rate(truth, decoded_preds)
             total_wer += word_error_rate
             total_cer += char_error_rate
+            
+            count += 1
+            if count%10==0:
+                print([("".join(ref),"".join(pred)) for ref, pred in zip(truth, decoded_preds)])
             # print(f'Word Error Rate: {word_error_rate} | Character Error Rate: {char_error_rate}')
             
     test_loss /= len(test_loader)
@@ -59,7 +65,7 @@ def main():
     test_dataset = dataset.LipDataset(args.data_dir, args.label_dir, transform=test_transforms, vocab=constants.vocab, word2idx=word2idx,idx2word=idx2word)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=dataset.collate_fn)
     
-    model = models.LipNet(len(word2idx), input_channels=3, hidden_size=128)
+    model = models.LipNet(len(constants.vocab), input_channels=3, hidden_size=256)
     model.to(args.device)
     
     checkpoint = torch.load(args.checkpoint)

@@ -3,6 +3,56 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import editdistance
+import cv2
+import mediapipe as mp
+
+
+
+def extract_lip_region_from_image(frame,face_mesh, padding=20):
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = face_mesh.process(rgb_frame)
+
+    if results.multi_face_landmarks:
+        for face_landmarks in results.multi_face_landmarks:
+            # Get the lip landmarks (use indices for lips from MediaPipe's documentation)
+            lips_indices = [
+                61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318,
+                402, 317, 14, 87, 178, 88, 95, 185, 40, 39, 37, 0, 267, 269, 270, 409, 415
+            ]
+            h, w, _ = frame.shape
+            lip_coords = [(int(face_landmarks.landmark[i].x * w), int(face_landmarks.landmark[i].y * h)) for i in lips_indices]
+            
+            # Get bounding box around lips
+            x_min = min([x for x, y in lip_coords])
+            y_min = min([y for x, y in lip_coords])
+            x_max = max([x for x, y in lip_coords])
+            y_max = max([y for x, y in lip_coords])
+            
+            # Add some padding
+            x_min, y_min = max(x_min - padding, 0), max(y_min - padding//2, 0)
+            x_max, y_max = min(x_max + padding, w), min(y_max + padding//2, h)
+            
+            # Crop the lip region
+            lip_region = frame[y_min:y_max, x_min:x_max]
+            
+            lip_region = cv2.resize(lip_region, (100, 50))
+            
+            return lip_region
+    return None
+
+
+def extract_lip_region_from_video(video_path, face_mesh, padding=20):
+    cap = cv2.VideoCapture(video_path)
+    frames = []
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        lip_region = extract_lip_region_from_image(frame, face_mesh, padding)
+        if lip_region is not None:
+            frames.append(lip_region)
+    cap.release()
+    return frames
 
 
 def get_word2idx_idx2word(vocab):

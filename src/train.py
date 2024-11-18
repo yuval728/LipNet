@@ -43,7 +43,6 @@ def train(model, dataloader, criterion, optimizer, device, print_every=40):
         if (i + 1) % print_every == 0:
             utils.ctc_greedy_decode(output.clone(), idx2word)
             print(f"Batch {i+1}/{len(dataloader)} - Loss: {loss.item()}")
-        
 
     return total_loss / len(dataloader)
 
@@ -185,15 +184,6 @@ def parse_args():
         help="Path to a previous checkpoint to resume training",
     )
     parser.add_argument(
-        "--lr_schedule", action="store_true", help="Use lambda learning rate scheduler"
-    )
-    parser.add_argument(
-        "--lr_schedule_step",
-        type=int,
-        default=30,
-        help="Step size for the learning rate scheduler",
-    )
-    parser.add_argument(
         "--split_ratio", type=float, default=0.2, help="Validation split ratio"
     )
     parser.add_argument(
@@ -211,6 +201,15 @@ def parse_args():
         default=None,
         help="New learning rate when resuming training",
     )
+    # parser.add_argument(
+    #     "--lr_schedule", action="store_true", help="Use lambda learning rate scheduler"
+    # )
+    # parser.add_argument(
+    #     "--lr_schedule_step",
+    #     type=int,
+    #     default=30,
+    #     help="Step size for the learning rate scheduler",
+    # )
     return parser.parse_args()
 
 
@@ -228,7 +227,6 @@ def main():
     transform = transforms.Compose(
         [
             transforms.ToTensor(),
-            # transforms.Grayscale(num_output_channels=1),
         ]
     )
 
@@ -254,25 +252,26 @@ def main():
     )
 
     model = LipNet(
-        vocab_size=len(word2idx),
+        vocab_size=len(constants.vocab),
         input_channels=args.input_channels,
         hidden_size=args.hidden_size,
         dropout=args.dropout,
     ).to(device)
 
-    criterion = nn.CTCLoss(zero_infinity=True, blank = 0)
+    criterion = nn.CTCLoss(zero_infinity=True, blank=0)
     optimizer = optim.Adam(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
 
     lr_scheduler = None
-    if args.lr_schedule:
-        lambda_lr = (  # noqa: E731
-            lambda epoch: 1.0
-            if epoch < args.lr_schedule_step
-            else math.exp(-0.1 * (epoch - args.lr_schedule_step + 1))
-        )  # noqa: E731
-        lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_lr)
+    # if args.lr_schedule:
+    #     lambda_lr = (  # noqa: E731
+    #         lambda epoch: 1.0
+    #         if epoch < args.lr_schedule_step
+    #         else math.exp(-0.1 * (epoch - args.lr_schedule_step + 1))
+    #     )  # noqa: E731
+    #     lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_lr)
+    # print(lr_scheduler)
 
     loss_history = train_model(
         model=model,
@@ -287,7 +286,6 @@ def main():
         prev_checkpoint=args.prev_checkpoint,
         print_every=args.print_every,
         new_lr=args.new_lr,
-    
     )
 
     return loss_history

@@ -1,6 +1,7 @@
 import torch
 from torchvision import transforms
 import cv2
+import numpy as np
 import os
 from torch.utils.data import Dataset, DataLoader
 from utils import  get_word2idx_idx2word, char_to_num, num_to_char
@@ -13,11 +14,12 @@ class LipDataset(Dataset):
         self.label_dir = label_dir
         self.transform = transform
         self.data = os.listdir(data_dir)
-        # self.data.remove('sgib8n.mpg') # Remove this file as it is corrupted
+        self.data.remove('sgib8n.mpg.npy')  # Exclude problematic file if needed
         self.label = os.listdir(label_dir)
         self.vocab = vocab
         self.word2idx = word2idx
         self.idx2word = idx2word
+        
 
     def __len__(self):
         return len(self.data)
@@ -27,6 +29,7 @@ class LipDataset(Dataset):
             data_path = os.path.join(self.data_dir, self.data[idx])
             label_file = self.data[idx].split(".")[0] + ".align"
             label_path = os.path.join(self.label_dir, label_file)
+        
 
             assert os.path.exists(data_path), f"Data path {data_path} does not exist"
             assert os.path.exists(label_path), f"Label path {label_path} does not exist"
@@ -41,50 +44,33 @@ class LipDataset(Dataset):
                 print(idx)
 
             label = self.load_alignment(label_path)
-            
-#             print(idx, label_file)
 
             return frames, label
         except Exception as e:
             print(idx, e)
-            
+
     def get_data_name(self, idx):
         return self.data[idx].split(".")[0]
+
     def get_data_idx(self, name):
         return self.data.index(name + ".mpg")
-    
+
 
     def load_video(self, path: str) -> torch.Tensor:
-        cap = cv2.VideoCapture(path)
-        num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
+        np_frames = np.load(path)
         frames = []
-        for i in range(num_frames):
-            ret, frame = cap.read()
+        for i in np_frames:
+            frames.append(self.transform(i))
             
-            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            # Take only the lip part of the frame
-            frame = frame[
-                190:236, 80:220, :
-            ]  # TODO: Make it dynamic using dlib  
-            
-            if self.transform:
-                frame = self.transform(frame)
-
-            frames.append(frame)
-
-        cap.release()
-        
         frames = torch.stack(frames)
         
+        # Normalize frames (Z-score normalization)
         std = torch.std(frames)
         mean = torch.mean(frames)
-#         print(std, mean)
-        frames = (frames - mean) / std # Normalize the frames (z-score normalization
+        frames = (frames - mean) / std
 
-        return frames # (T, H, W, C)
-    
-    
+        return frames  # (T, C, H, W) format
+
     def load_alignment(self, path: str) -> torch.Tensor:
         with open(path, "r") as f:
             lines = f.readlines() 
@@ -92,13 +78,12 @@ class LipDataset(Dataset):
         for line in lines:
             line = line.split()
             if line[2] != "sil":
-                # tokens = [*tokens, ' ',line[2]]
                 tokens.append(' ')
                 tokens.extend(list(line[2]))  
 
         token_nums = char_to_num(tokens, self.word2idx)
         return torch.tensor(token_nums[1:], dtype=torch.long)
-    
+ 
       
 def collate_fn(batch, pad_value=0):
     frames, labels = zip(*batch)
@@ -107,7 +92,6 @@ def collate_fn(batch, pad_value=0):
     max_len = max([f.shape[0] for f in frames])
     frames = [torch.nn.functional.pad(input=f, pad=(0, 0, 0, 0, 0, 0, 0, max_len - f.shape[0]), mode='constant', value=0) for f in frames] 
     
-
     labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True)
     
     return torch.stack(frames), labels
