@@ -5,3 +5,5 @@ data
 weights
 checkpoints
 dump
+.pytest_cache
+mlruns

@@ -17,22 +17,25 @@ def save_lip_region_from_video_to_npy(video_path, face_mesh, padding=20, save_pa
     
     return save_path
 
-if __name__ == '__main__':
-    face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=True)
-    
+
+def main():
+
     args = argparse.ArgumentParser()
     args.add_argument('--videos_path', type=str, default='data/s1', help='Path to the videos')
     args.add_argument('--save_path', type=str, default='data/lip_region', help='Path to save the lip region')
     args.add_argument('--padding', type=int, default=30, help='Padding around the lip region')
     args = args.parse_args()
     
-    
+    face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=True)
     for video in tqdm(os.listdir(args.videos_path)):
         video_path = os.path.join(args.videos_path, video)
         save_path = os.path.join(args.save_path, video)
         save_lip_region_from_video_to_npy(video_path, face_mesh, save_path=save_path, padding=args.padding)
         
-        
     print(f'Lip region saved to {args.save_path}')
-    
     face_mesh.close()
+    
+if __name__ == '__main__':
+    main()
+    
+    

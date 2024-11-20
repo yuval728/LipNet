@@ -8,6 +8,7 @@ import utils
 import constants
 import models
 from torchvision import transforms
+import mlflow
 
 word2idx, idx2word = utils.get_word2idx_idx2word(constants.vocab)
 
@@ -46,17 +47,24 @@ def test(model, test_loader, device, criterion):
 
 def parse_args():
     parser = argparse.ArgumentParser( description='Test the LipNet model')
-    parser.add_argument('--checkpoint', type=str, required=True)
-    parser.add_argument('--batch_size', type=int, default=2)
-    parser.add_argument('--num_workers', type=int, default=4)
-    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--data_dir', type=str, required=True)
-    parser.add_argument('--label_dir', type=str, required=True)
-    
+    parser.add_argument('--checkpoint', type=str, required=True, help='Path to the checkpoint to be loaded')
+    parser.add_argument('--batch_size', type=int, default=2, help='Batch size for evaluation')
+    parser.add_argument('--num_workers', type=int, default=4, help='Number of workers for dataloader')
+    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu', help='Device to run the model on')
+    parser.add_argument('--data_dir', type=str, required=True, help='Path to the data directory')
+    parser.add_argument('--label_dir', type=str, required=True, help='Path to the label directory')
+    parser.add_argument('--mlflow_uri', type=str, default='http://localhost:5000', help='URI of the MLFlow server')
+    parser.add_argument('--experiment_name', type=str, default='LipNet', help='Name of the experiment')
+    parser.add_argument('--run_id', type=str, help='ID of the run to log the metrics')
     return parser.parse_args()
 
 def main():
     args = parse_args()
+    
+    mlflow.set_tracking_uri(args.mlflow_uri)
+    mlflow.set_experiment(args.experiment_name)
+    mlflow.start_run(run_id=args.run_id, nested=True)
+    
     
     test_transforms = transforms.Compose([
         transforms.ToTensor(),
@@ -77,6 +85,10 @@ def main():
     test_loss, total_wer, total_cer = test(model, test_loader, args.device, criterion)
     
     print(f'Test Loss: {test_loss} | Total WER: {total_wer} | Total CER: {total_cer}')
+    
+    mlflow.log_metrics({'test_loss': test_loss, 'total_wer': total_wer, 'total_cer': total_cer})
+    
+    mlflow.end_run()
     
 if __name__ == '__main__':
     main()

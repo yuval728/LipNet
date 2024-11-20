@@ -7,7 +7,7 @@ import numpy as np
 import os
 from tqdm.auto import tqdm
 import argparse
-import math
+import mlflow
 
 from dataset import LipDataset, collate_fn
 import utils
@@ -77,7 +77,6 @@ def train_model(
     val_dataloader,
     criterion,
     optimizer,
-    lr_scheduler,
     num_epochs,
     device,
     checkpoint_path="checkpoints",
@@ -126,6 +125,8 @@ def train_model(
         print(f"Train Loss: {train_loss} - Val Loss: {val_loss}")
 
         min_val_loss = min(min_val_loss, val_loss)
+        
+        is_best = val_loss == min_val_loss
 
         utils.save_checkpoint(
             model,
@@ -134,13 +135,14 @@ def train_model(
             val_loss,
             checkpoint_path,
             min_val_loss,
-            is_best=(val_loss == min_val_loss),
+            is_best=is_best,
         )
-
-        if lr_scheduler is not None:
-            lr_scheduler.step()
-            print(f"Learning rate: {lr_scheduler.get_last_lr()}")
-
+        
+        mlflow.log_metric("train_loss", train_loss, step=epoch)
+        mlflow.log_metric("val_loss", val_loss, step=epoch)
+        
+    mlflow.end_run()
+    
     return loss_history
 
 
@@ -201,20 +203,29 @@ def parse_args():
         default=None,
         help="New learning rate when resuming training",
     )
-    # parser.add_argument(
-    #     "--lr_schedule", action="store_true", help="Use lambda learning rate scheduler"
-    # )
-    # parser.add_argument(
-    #     "--lr_schedule_step",
-    #     type=int,
-    #     default=30,
-    #     help="Step size for the learning rate scheduler",
-    # )
+    parser.add_argument(
+        "--experiment_name",
+        type=str,
+        default="LipNet",
+        help="Name of the experiment for MLflow",
+    )
+    parser.add_argument(
+        "--mlflow_url",
+        type=str,
+        default="http://localhost:5000",
+        help="URL of the MLflow server",
+    )
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    
+    mlflow.set_tracking_uri(args.mlflow_url)
+    mlflow.set_experiment(args.experiment_name)
+    mlflow.start_run(log_system_metrics=True, nested=True)
+    mlflow.log_params(vars(args))
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -263,23 +274,12 @@ def main():
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
 
-    lr_scheduler = None
-    # if args.lr_schedule:
-    #     lambda_lr = (  # noqa: E731
-    #         lambda epoch: 1.0
-    #         if epoch < args.lr_schedule_step
-    #         else math.exp(-0.1 * (epoch - args.lr_schedule_step + 1))
-    #     )  # noqa: E731
-    #     lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_lr)
-    # print(lr_scheduler)
-
     loss_history = train_model(
         model=model,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
         criterion=criterion,
         optimizer=optimizer,
-        lr_scheduler=lr_scheduler,
         num_epochs=args.num_epochs,
         device=device,
         checkpoint_path=args.checkpoint_path,

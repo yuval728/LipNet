@@ -14,7 +14,6 @@ class LipDataset(Dataset):
         self.label_dir = label_dir
         self.transform = transform
         self.data = os.listdir(data_dir)
-        self.data.remove('sgib8n.mpg.npy')  # Exclude problematic file if needed
         self.label = os.listdir(label_dir)
         self.vocab = vocab
         self.word2idx = word2idx
