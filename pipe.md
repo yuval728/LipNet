@@ -7,3 +7,6 @@
 
 ### Testing:
     python src/eval.py --checkpoint checkpoints/check_best1.pt --data_dir data/lip_region/s1 --label_dir data/alignments/s1  --run_id 0ca421225389489ea6de0dd41050d02b
+
+### Trace model:
+    python src/trace_model.py --checkpoint_path checkpoints\checkpoint_best.pt --output_path model_store/model.pt

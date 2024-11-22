@@ -108,11 +108,13 @@ def save_checkpoint(model, optimizer, epoch, loss, checkpoint_path, min_loss, is
     
     checkpoint_name = os.path.join(checkpoint_path, f'checkpoint_{epoch}.pt')
     torch.save(checkpoint, checkpoint_name)
+    mlflow.log_artifact(checkpoint_name)
     print(f'Checkpoint saved at {checkpoint_name}')
     
     if is_best:
         best_path = checkpoint_name.replace('.pt', '_best.pt')
         torch.save(checkpoint, best_path)
+        mlflow.log_artifact(best_path)
         print(f'Best model saved at {best_path}')
     
     

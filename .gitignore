@@ -1,9 +1,7 @@
 env
 .vscode
 __pycache__
-data
-weights
-checkpoints
-dump
 .pytest_cache
+data
+dump
 mlruns
