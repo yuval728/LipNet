@@ -10,3 +10,24 @@
 
 ### Trace model:
     python src/trace_model.py --checkpoint_path checkpoints\checkpoint_best.pt --output_path model_store/model.pt
+
+### Prediction:
+    python src/prediction.py --model_path model_store/model.pt --video_path data/s1/bbaf2n.mpg --padding 30
+
+### Archive model:
+    torch-model-archiver --model-name lipnet  --version 1.0  --serialized-file model_store/model.pt  --handler src/model_handler.py  --extra-files "src/models.py,src/constants.py,src/utils.py" --export-path model_store -f
+
+### Build docker image:
+    docker build -t verbalvision .
+
+### Run docker container:
+    docker run -p 8080:8080 8081:8081 8082:8082 verbalvision
+
+### API:
+    curl http://localhost:8080/ping
+    curl http://localhost:8081/models
+    curl http://localhost:8081/models/lipnet
+    curl -X POST http://localhost:8080/predictions/lipnet \
+     -F "video=@data/s1/bbaf2n.mpg" \
+     -F "ref_text=bin blue at two now" 
+    
