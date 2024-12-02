@@ -1,19 +1,16 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import transforms
 import numpy as np
-import os
+
 from tqdm.auto import tqdm
 import argparse
 import mlflow
 
-from dataset import LipDataset, collate_fn
-import utils
-import constants
-from models import LipNet
-
+from .dataset import LipDataset, collate_fn
+from . import constants, utils
+from .models import LipNet
 
 word2idx, idx2word = utils.get_word2idx_idx2word(constants.vocab)
 
@@ -141,7 +138,6 @@ def train_model(
         mlflow.log_metric("train_loss", train_loss, step=epoch)
         mlflow.log_metric("val_loss", val_loss, step=epoch)
         
-    mlflow.end_run()
     
     return loss_history
 
@@ -288,6 +284,8 @@ def main():
         new_lr=args.new_lr,
     )
 
+    mlflow.end_run()
+    
     return loss_history
 
 

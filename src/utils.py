@@ -4,7 +4,6 @@ import torch
 import torch.nn.functional as F
 import editdistance
 import cv2
-import mediapipe as mp
 import mlflow
 
 
@@ -71,15 +70,22 @@ def num_to_char(nums, idx2word):
     return [idx2word[num] for num in nums]
 
 
-def split_dataset(dataset, val_split=0.2):
+def split_dataset(dataset, val_split=0.2, seed=42, test_split=None):
     n_val = int(len(dataset) * val_split)
     n_train = len(dataset) - n_val
-    return torch.utils.data.random_split(dataset, [n_train, n_val])
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(seed))
+    if not test_split or test_split == 0:
+        return train_dataset, val_dataset
+    
+    n_test = int(len(val_dataset) * test_split)
+    n_val = len(val_dataset) - n_test
+    val_dataset, test_dataset = torch.utils.data.random_split(val_dataset, [n_val, n_test], generator=torch.Generator().manual_seed(seed))
+    return train_dataset, val_dataset, test_dataset
 
 
 def ctc_loss_fn(y_true, y_pred, ctc_loss, device):
-    batch_len = y_true.size(0)  # Number of sequences in the batch
-    input_length = y_pred.size(1)  # Time steps per batch sequence
+    # batch_len = y_true.size(0)  # Number of sequences in the batch
+    # input_length = y_pred.size(1)  # Time steps per batch sequence
 
     input_lengths = torch.full((y_pred.size(0),), y_pred.size(1), dtype=torch.long).to(device)
     target_lengths = torch.full((y_true.size(0),), y_true.size(1), dtype=torch.long).to(device)

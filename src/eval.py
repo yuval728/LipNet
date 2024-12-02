@@ -3,10 +3,7 @@ import numpy as np
 import os
 from tqdm.auto import tqdm
 import argparse
-import dataset
-import utils
-import constants
-import models
+from . import dataset, utils, constants, models
 from torchvision import transforms
 import mlflow
 
