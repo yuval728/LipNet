@@ -1,8 +1,8 @@
 import os
 import argparse
 import torch
-from models import LipNet
-import constants
+from .models import LipNet
+from . import constants
 
 def load_model(checkpoint_path):
     model = LipNet(vocab_size=len(constants.vocab), hidden_size=256, input_channels=3)
@@ -11,9 +11,8 @@ def load_model(checkpoint_path):
     model.eval()
     return model
 
-def trace_model(checkpoint_path):
+def trace_model(checkpoint_path, example_input=torch.rand(1, 3, 75, 50, 100)):
     model = load_model(checkpoint_path)
-    example_input = torch.rand(1, 3, 75, 50, 100)
     traced_model = torch.jit.trace(model, example_input)
     return traced_model
 

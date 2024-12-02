@@ -1,18 +1,18 @@
 ### Data Preprocessing:
-    python src/preprocess.py --videos_path data/s1 --save_path data/lip_region/s1 --padding 30
+    python -m src.preprocess --videos_path data/s1 --save_path data/lip_region/s1 --padding 30
 
 
 ### Training:
-    python src/train.py --data_dir data/lip_region/s1 --label_dir data/alignments/s1 --checkpoint_path checkpoints --batch_size 2 --num_epochs 2 --prev_checkpoint checkpoints/check1.pt --hidden_size 256 --new_lr 2e-5
+    python -m src.train --data_dir data/lip_region/s1 --label_dir data/alignments/s1 --checkpoint_path checkpoints --batch_size 2 --num_epochs 2 --prev_checkpoint checkpoints/check1.pt --hidden_size 256 --new_lr 2e-5
 
 ### Testing:
-    python src/eval.py --checkpoint checkpoints/check_best1.pt --data_dir data/lip_region/s1 --label_dir data/alignments/s1  --run_id 0ca421225389489ea6de0dd41050d02b
+    python -m src.eval --checkpoint checkpoints/check_best1.pt --data_dir data/lip_region/s1 --label_dir data/alignments/s1  --run_id 0ca421225389489ea6de0dd41050d02b
 
 ### Trace model:
-    python src/trace_model.py --checkpoint_path checkpoints\checkpoint_best.pt --output_path model_store/model.pt
+    python -m src.trace_model --checkpoint_path checkpoints\checkpoint_best.pt --output_path deployment/model.pt
 
 ### Prediction:
-    python src/prediction.py --model_path model_store/model.pt --video_path data/s1/bbaf2n.mpg --padding 30
+    python -m src.prediction --model_path deployment/model.pt --video_path data/s1/bbaf2n.mpg --padding 30
 
 ### Archive model:
     torch-model-archiver --model-name lipnet  --version 1.0  --serialized-file model_store/model.pt  --handler src/model_handler.py  --extra-files "src/models.py,src/constants.py,src/utils.py" --export-path model_store -f

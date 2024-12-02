@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import os
 from torch.utils.data import Dataset, DataLoader
-from utils import  get_word2idx_idx2word, char_to_num, num_to_char
+from .utils import  get_word2idx_idx2word, char_to_num, num_to_char
 
 
 

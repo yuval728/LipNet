@@ -9,6 +9,7 @@ COPY requirements.txt  /home/model-server/
 RUN pip install --no-cache-dir -r /home/model-server/requirements.txt
 
 COPY model_store/lipnet.mar /home/model-server/model_store/
+COPY deployment/config.properties /home/model-server/
 COPY src/model_handler.py /home/model-server/
 
 # Expose the port
