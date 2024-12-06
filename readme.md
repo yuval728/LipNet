@@ -14,9 +14,9 @@ VerbalVision is a deep learning-based lip reading application inspired by the Li
 
 ### Installation
 
-. Clone the repository:
+1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/verbalvision.git
+    git clone https://github.com/yuval728/verbalvision.git
     cd verbalvision
     ```
 
